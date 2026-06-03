@@ -25,10 +25,13 @@ export type SessionContext = {
  * production.
  */
 export async function getSessionContext(): Promise<SessionContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Only attempt a real Supabase session when the project is configured.
+  // A DB-backed deploy without Supabase auth (or local dev) skips straight to
+  // the gated dev fallback instead of crashing on an empty Supabase URL.
+  const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const user = supabaseConfigured
+    ? (await (await createClient()).auth.getUser()).data.user
+    : null;
 
   if (user) {
     const [row] = await db

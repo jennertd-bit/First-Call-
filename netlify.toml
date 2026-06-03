@@ -1,0 +1,14 @@
+# Netlify build config for the FirstCall pnpm + Turborepo monorepo.
+# The Next.js app lives in apps/web; the Next Runtime plugin serves its
+# server components, server actions, and route handlers as functions.
+[build]
+  command = "pnpm --filter web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  # Use the workspace's pinned pnpm and skip turbo telemetry on CI.
+  NETLIFY_USE_PNPM = "true"
+  TURBO_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
