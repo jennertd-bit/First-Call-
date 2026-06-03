@@ -3,22 +3,38 @@ import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
+export type AppDb = PostgresJsDatabase<typeof schema>;
+
 /**
  * Runtime client for tenant-facing queries. Connects as the non-superuser
  * `firstcall_app` role (APP_DATABASE_URL) so RLS policies are enforced — the
  * privileged migration/seed client (./client) must never serve user requests.
+ *
+ * Lazily initialised: importing this module must NOT require the env (so
+ * `next build` can evaluate the route graph without a DB), only *using* it does.
  */
-const connectionString =
-  process.env.APP_DATABASE_URL ?? process.env.DATABASE_URL;
+let instance: AppDb | undefined;
 
-if (!connectionString) {
-  throw new Error("APP_DATABASE_URL (or DATABASE_URL) is not set");
+function getAppDb(): AppDb {
+  if (!instance) {
+    const connectionString =
+      process.env.APP_DATABASE_URL ?? process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("APP_DATABASE_URL (or DATABASE_URL) is not set");
+    }
+    const client = postgres(connectionString, { prepare: false });
+    instance = drizzle(client, { schema });
+  }
+  return instance;
 }
 
-const client = postgres(connectionString, { prepare: false });
-
-export const appDb = drizzle(client, { schema });
-export type AppDb = PostgresJsDatabase<typeof schema>;
+export const appDb = new Proxy({} as AppDb, {
+  get(_target, prop, receiver) {
+    const real = getAppDb();
+    const value = Reflect.get(real, prop, receiver);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
 
 /**
  * Run a callback inside a transaction with `app.tenant_id` bound to the GUC

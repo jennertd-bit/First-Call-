@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+// Per-request (session + tenant data); never prerender at build.
+export const dynamic = "force-dynamic";
+
 /** Surface B shell — responsive web PM/HOA portal (spec §7). */
 export default function PmLayout({ children }: { children: ReactNode }) {
   return (
