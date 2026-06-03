@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "price_list_items_tenant_code_idx" ON "price_list_items" USING btree ("tenant_id","code");

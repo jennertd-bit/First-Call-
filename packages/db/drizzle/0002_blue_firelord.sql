@@ -1,0 +1,2 @@
+ALTER TABLE "estimates" ADD COLUMN IF NOT EXISTS "overhead_pct" integer DEFAULT 10 NOT NULL;--> statement-breakpoint
+ALTER TABLE "estimates" ADD COLUMN IF NOT EXISTS "profit_pct" integer DEFAULT 10 NOT NULL;
