@@ -134,8 +134,10 @@ export function DispatchBoard({
 
   return (
     <div className="flex flex-col gap-[18px]">
-      <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3.5">
-        <Gauge value={metrics.captureRatio} />
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="sm:col-span-2 lg:col-span-1">
+          <Gauge value={metrics.captureRatio} />
+        </div>
         <Stat
           n={fmt(metrics.pipelineValue)}
           label="Pipeline value"
@@ -154,7 +156,7 @@ export function DispatchBoard({
           Live job pipeline · drag to advance a stage · click a card to open its
           estimate
         </MonoLabel>
-        <div className="grid grid-cols-5 items-start gap-3">
+        <div className="-mx-4 flex snap-x snap-mandatory items-start gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
           {COLUMNS.map((col) => {
             const colCards = cards.filter((c) => c.status === col.id);
             const sum = colCards.reduce((s, c) => s + (c.ballparkTotal ?? 0), 0);
@@ -168,7 +170,7 @@ export function DispatchBoard({
                 onDragLeave={() => setOver((o) => (o === col.id ? null : o))}
                 onDrop={() => drop(col.id)}
                 className={
-                  "rounded-card border bg-wash p-2.5 transition-colors " +
+                  "w-[82%] flex-shrink-0 snap-start rounded-card border bg-wash p-2.5 transition-colors sm:w-[280px] lg:w-auto " +
                   (over === col.id
                     ? "border-[var(--brand-accent)] bg-[rgba(232,112,58,0.05)]"
                     : "border-line2")

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 
 type NavItem = { href: string; label: string; section: string };
 
@@ -31,10 +32,61 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function CrmSidebar({ tenant }: { tenant: string }) {
+/**
+ * Surface C shell. Desktop: static 248px sidebar + topbar. Mobile (<lg): the
+ * sidebar collapses into a slide-in drawer toggled by the topbar hamburger, so
+ * the full width goes to content. Drawer state lives here and auto-closes on
+ * navigation.
+ */
+export function CrmShell({
+  tenant,
+  children,
+}: {
+  tenant: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Collapse the drawer whenever the route changes (mobile nav tap).
+  useEffect(() => setOpen(false), [pathname]);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-paper text-ink">
+      {open ? (
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-40 bg-[rgba(14,42,71,0.45)] lg:hidden"
+        />
+      ) : null}
+      <CrmSidebar tenant={tenant} open={open} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <CrmTopBar onMenu={() => setOpen(true)} />
+        <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export function CrmSidebar({
+  tenant,
+  open = false,
+}: {
+  tenant: string;
+  open?: boolean;
+}) {
   const pathname = usePathname();
   return (
-    <aside className="flex h-screen w-[248px] flex-shrink-0 flex-col border-r border-line bg-card">
+    <aside
+      className={
+        "fixed inset-y-0 left-0 z-50 flex h-screen w-[248px] flex-shrink-0 flex-col border-r border-line bg-card transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 " +
+        (open ? "translate-x-0" : "-translate-x-full")
+      }
+    >
       <div className="flex items-center gap-[11px] px-[18px] pb-4 pt-5">
         <div className="grid h-9 w-9 place-items-center rounded-[10px] bg-[var(--brand-accent)] font-mono text-[18px] font-semibold text-white shadow-[0_4px_12px_rgba(232,112,58,0.3)]">
           F
@@ -68,7 +120,12 @@ export function CrmSidebar({ tenant }: { tenant: string }) {
         </div>
       </nav>
 
-      <div className="p-3">
+      <div className="space-y-2.5 p-3">
+        {/* Surface switcher lives in the topbar on desktop; on mobile it moves
+            into the drawer so all navigation stays in one place. */}
+        <div className="lg:hidden">
+          <SurfaceSwitcher />
+        </div>
         <div className="flex items-center gap-2.5 rounded-[11px] border border-line2 bg-wash px-2.5 py-[9px]">
           <div className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-[var(--brand-primary)] font-mono text-[13px] font-semibold text-white">
             {tenant.charAt(0)}
@@ -116,23 +173,54 @@ function SurfaceSwitcher() {
   );
 }
 
-export function CrmTopBar({ actions }: { actions?: React.ReactNode }) {
+export function CrmTopBar({
+  actions,
+  onMenu,
+}: {
+  actions?: React.ReactNode;
+  onMenu?: () => void;
+}) {
   const pathname = usePathname();
   const item = [...nav]
     .sort((a, b) => b.href.length - a.href.length)
     .find((n) => isActive(pathname, n.href));
   const title = item?.section ?? "Restoration CRM";
   return (
-    <div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line bg-card px-6">
-      <div className="min-w-0 flex-shrink-0">
-        <div className="whitespace-nowrap text-lg font-bold tracking-[-0.015em] text-[var(--brand-primary)]">
-          {title}
+    <div className="flex h-16 flex-shrink-0 items-center justify-between gap-3 border-b border-line bg-card px-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <button
+          type="button"
+          aria-label="Open menu"
+          onClick={onMenu}
+          className="-ml-1 grid h-9 w-9 flex-shrink-0 place-items-center rounded-control text-[var(--brand-primary)] transition-colors hover:bg-[var(--hover)] lg:hidden"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div className="min-w-0">
+          <div className="truncate text-base font-bold tracking-[-0.015em] text-[var(--brand-primary)] sm:text-lg">
+            {title}
+          </div>
+          <div className="mono-label mt-0.5 text-[11px]">FirstCall · CRM</div>
         </div>
-        <div className="mono-label mt-0.5 text-[11px]">FirstCall · CRM</div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {actions}
-        <SurfaceSwitcher />
+        <div className="hidden lg:block">
+          <SurfaceSwitcher />
+        </div>
       </div>
     </div>
   );
