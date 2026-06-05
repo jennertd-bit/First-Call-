@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { SurfaceSwitcher } from "@/app/_components/surface-switcher";
 
 type NavItem = { href: string; label: string; section: string };
 
@@ -19,12 +20,6 @@ const nav: NavItem[] = [
     section: "Owners & Insurance",
   },
   { href: "/crm/price-list", label: "Price List", section: "Price List" },
-];
-
-const surfaces = [
-  { href: "/owner", label: "Owner App", id: "owner" },
-  { href: "/pm", label: "PM Portal", id: "pm" },
-  { href: "/crm", label: "Restoration CRM", id: "crm" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -139,37 +134,6 @@ export function CrmSidebar({
         </div>
       </div>
     </aside>
-  );
-}
-
-function SurfaceSwitcher() {
-  const pathname = usePathname();
-  const current = pathname.startsWith("/pm")
-    ? "pm"
-    : pathname.startsWith("/owner")
-      ? "owner"
-      : "crm";
-  return (
-    <div className="flex gap-[3px] rounded-[11px] border border-line2 bg-[var(--hover)] p-[3px]">
-      {surfaces.map((s) =>
-        s.id === current ? (
-          <span
-            key={s.id}
-            className="rounded-lg bg-card px-3 py-1.5 font-mono text-[11.5px] font-semibold tracking-[0.02em] text-[var(--brand-primary)] shadow-sm"
-          >
-            {s.label}
-          </span>
-        ) : (
-          <Link
-            key={s.id}
-            href={s.href}
-            className="rounded-lg px-3 py-1.5 font-mono text-[11.5px] font-medium tracking-[0.02em] text-gray hover:text-[var(--brand-primary)]"
-          >
-            {s.label}
-          </Link>
-        ),
-      )}
-    </div>
   );
 }
 
