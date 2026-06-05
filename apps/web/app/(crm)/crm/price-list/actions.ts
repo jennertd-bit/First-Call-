@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { importPriceListItems, type PriceListRow } from "@/lib/data";
+import {
+  importPriceListItems,
+  updatePriceListItem,
+  type PriceListRow,
+} from "@/lib/data";
 import { parseCsv, parseMoneyToCents } from "@/lib/csv";
 
 type Field = "code" | "description" | "category" | "unit" | "price";
@@ -139,4 +143,57 @@ export async function importPriceListAction(formData: FormData) {
     if (firstError) params.set("reason", firstError);
   }
   redirect(`/crm/price-list?${params.toString()}`);
+}
+
+const UpdateSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string().trim().min(1, "Description is required").max(500),
+  iicrcCategory: z.string().trim().max(128).nullable(),
+  unit: z.string().trim().min(1, "Unit is required").max(32),
+  unitPrice: z.number().int().nonnegative(),
+});
+
+export type UpdatePriceListInput = {
+  id: string;
+  description: string;
+  iicrcCategory: string | null;
+  unit: string;
+  /** Raw price text from the input (e.g. "1,250.00" or "$42"). */
+  priceText: string;
+};
+
+export type UpdatePriceListResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Inline-edit a single price-list row. Returns a result object (rather than
+ * redirecting) so the table can show per-row success/error without a full
+ * navigation. Tenant scoping is enforced in the data layer.
+ */
+export async function updatePriceListItemAction(
+  input: UpdatePriceListInput,
+): Promise<UpdatePriceListResult> {
+  const cents = parseMoneyToCents(input.priceText);
+  if (cents === null) {
+    return { ok: false, error: `Invalid price "${input.priceText}"` };
+  }
+  const parsed = UpdateSchema.safeParse({
+    id: input.id,
+    description: input.description,
+    iicrcCategory: input.iicrcCategory?.trim() ? input.iicrcCategory.trim() : null,
+    unit: input.unit,
+    unitPrice: cents,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
+  }
+
+  const { id, ...fields } = parsed.data;
+  await updatePriceListItem(id, fields);
+  revalidatePath("/crm/price-list");
+  return { ok: true };
 }

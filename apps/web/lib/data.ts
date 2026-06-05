@@ -1,6 +1,6 @@
 import "server-only";
 import { db, schema, withTenant, type AppDb } from "@firstcall/db";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type {
   CauseOfLoss,
   CoverageBucket,
@@ -199,6 +199,90 @@ export function listPriceListItems(limit = 50) {
       .orderBy(asc(schema.priceListItems.code))
       .limit(limit),
   );
+}
+
+export type PriceListItem = typeof schema.priceListItems.$inferSelect;
+
+export type PriceListPage = {
+  items: PriceListItem[];
+  total: number;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+};
+
+export const PRICE_LIST_PAGE_SIZE = 100;
+
+/**
+ * A single page of the tenant's price list, optionally filtered by a free-text
+ * query (matched against code, description, or category). Returns the filtered
+ * total so the UI can paginate the *entire* catalog, not just the first N rows.
+ */
+export function listPriceListItemsPage(opts: {
+  q?: string;
+  page?: number;
+}): Promise<PriceListPage> {
+  const pageSize = PRICE_LIST_PAGE_SIZE;
+  const page = Math.max(1, Math.floor(opts.page ?? 1));
+  return scoped(async (tx, ctx) => {
+    const q = opts.q?.trim();
+    const filter = q
+      ? and(
+          eq(schema.priceListItems.tenantId, ctx.tenantId),
+          or(
+            ilike(schema.priceListItems.code, `%${q}%`),
+            ilike(schema.priceListItems.description, `%${q}%`),
+            ilike(schema.priceListItems.iicrcCategory, `%${q}%`),
+          ),
+        )
+      : eq(schema.priceListItems.tenantId, ctx.tenantId);
+
+    const [[cnt], rows] = await Promise.all([
+      tx
+        .select({ c: sql<number>`count(*)::int` })
+        .from(schema.priceListItems)
+        .where(filter),
+      tx
+        .select()
+        .from(schema.priceListItems)
+        .where(filter)
+        .orderBy(asc(schema.priceListItems.code))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+    ]);
+
+    const total = cnt?.c ?? 0;
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    return { items: rows, total, page, pageCount, pageSize };
+  });
+}
+
+/**
+ * Update a single price-list row for the caller's tenant. `code` is the
+ * estimate join key and stays immutable here; callers edit the descriptive
+ * fields and price. Tenant-scoped (defence-in-depth on top of RLS) so one
+ * tenant can never mutate another's catalog by guessing an id.
+ */
+export function updatePriceListItem(
+  id: string,
+  fields: {
+    description: string;
+    iicrcCategory: string | null;
+    unit: string;
+    unitPrice: number;
+  },
+): Promise<void> {
+  return scoped(async (tx, ctx) => {
+    await tx
+      .update(schema.priceListItems)
+      .set({ ...fields, updatedAt: new Date() })
+      .where(
+        and(
+          eq(schema.priceListItems.id, id),
+          eq(schema.priceListItems.tenantId, ctx.tenantId),
+        ),
+      );
+  });
 }
 
 /**
