@@ -1,3 +1,13 @@
+/**
+ * FirstCall — Proprietary and Confidential
+ * Copyright © 2026 FirstCall. All rights reserved.
+ *
+ * This source file embodies confidential trade secrets of FirstCall,
+ * including its estimating and cost-modeling methodology. Unauthorized
+ * copying, modification, distribution, reverse engineering, or imitation,
+ * via any medium, is strictly prohibited. No license is granted except by
+ * written agreement. See /LICENSE.
+ */
 import type { CauseOfLoss } from "@firstcall/types";
 
 /**

@@ -34,7 +34,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
-      <body style={style}>{children}</body>
+      <body style={style}>
+        {children}
+        <footer className="border-t border-line px-4 py-2.5 text-center text-[10.5px] leading-tight text-faint">
+          © 2026 FirstCall. Proprietary &amp; confidential — all rights
+          reserved. Unauthorized reproduction, distribution, or imitation is
+          prohibited.
+        </footer>
+      </body>
     </html>
   );
 }
